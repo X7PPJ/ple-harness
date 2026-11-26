@@ -22,7 +22,9 @@ that a task serves. This entry closes that gap.
    writes a deliverable-by-deliverable plan.
 3. **Work**: the worker runs with `bash`, `read_file`, `write_file` **and every
    MCP tool**, so it can read the workbook it must fill, write the document it
-   must deliver, or query the CAD model.
+   must deliver, or query the CAD model. The planner and the verifier get only
+   the MCP tools whose names read like readers (`get/list/read/query/...`) and
+   not like writers, so verification cannot modify the project.
 4. **Verify**: a fresh-context verifier re-opens each deliverable and replies
    `PASS` or a numbered list of gaps; up to two fix rounds are fed back to the
    worker while time remains.

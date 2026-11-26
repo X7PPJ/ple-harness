@@ -479,12 +479,14 @@ async def solve(session):
       + (("; " + "; ".join(registry.notes)) if registry.notes else "")
   )
   work_tools = TOOLS + registry.defs
+  check_tools = READ_ONLY + registry.readonly_defs
   task = session.instruction
   plan = await agent(
       session,
       conversation(PLANNER, session, task),
-      READ_ONLY,
+      check_tools,
       until(1 - PLAN_SHARE),
+      registry=registry,
   )
   await session.log(f"plan: {plan[:1000]}")
   work = conversation(WORKER, session, f"{task}\n\n## Plan\n{plan}")
@@ -501,8 +503,9 @@ async def solve(session):
     verdict = await agent(
         session,
         conversation(VERIFIER, session, review),
-        READ_ONLY,
+        check_tools,
         until(CHECK_SHARE / 2),
+        registry=registry,
     )
     await session.log(f"verifier: {verdict[:1000]}")
     # PASS alone in any letter case (Markdown emphasis and a full stop aside),

@@ -74,6 +74,8 @@ def main():
     registry = asyncio.run(mcp_tools.discover(session))
 
     assert registry.servers == ["apps(2)"], registry.servers
+    ro = [d["function"]["name"] for d in registry.readonly_defs]
+    assert ro == ["mcp__apps__sheet_read"], ro
     names = [d["function"]["name"] for d in registry.defs]
     assert names == ["mcp__apps__sheet_read", "mcp__apps__doc_write"], names
     # the dot in the remote name is sanitized in the function name but kept in

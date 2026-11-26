@@ -21,11 +21,25 @@ module turns every MCP tool into an ordinary OpenAI function tool named
 """
 
 import json
+import re
 
 import taskbridge
 
 PREFIX = "mcp__"
 MAX_TOOLS = 48  # keep the tool list small enough for long tasks
+# A verifier must not change the project, so it only sees tools that look like
+# readers. The heuristic is name-based because MCP schemas do not say whether a
+# tool writes.
+WRITE_WORDS = re.compile(
+    r"write|create|update|delete|remove|set_|_set|put|post|insert|append|edit"
+    r"|send|move|rename|add|upload|apply|commit|run|exec",
+    re.I,
+)
+READ_WORDS = re.compile(
+    r"get|list|read|search|query|find|describe|view|show|fetch|lookup|open"
+    r"|inspect|resolve|calc|compute|check|validate",
+    re.I,
+)
 
 
 def _sanitize(text):
@@ -38,6 +52,7 @@ class Registry:
 
   def __init__(self):
     self.defs = []
+    self.readonly_defs = []
     self.routes = {}
     self.servers = []
     self.notes = []
@@ -112,13 +127,16 @@ async def discover(session):
       schema = spec.get("inputSchema") or {"type": "object", "properties": {}}
       if schema.get("type") != "object":
         schema = {"type": "object", "properties": {}}
-      registry.defs.append({
+      definition = {
           "type": "function",
           "function": {
               "name": name,
               "description": (spec.get("description") or remote)[:900],
               "parameters": schema,
           },
-      })
+      }
+      registry.defs.append(definition)
+      if READ_WORDS.search(remote) and not WRITE_WORDS.search(remote):
+        registry.readonly_defs.append(definition)
       registry.routes[name] = (client, remote)
   return registry
