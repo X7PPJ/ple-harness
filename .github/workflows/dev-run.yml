@@ -1,0 +1,80 @@
+# Runs the PLE dev set on a GitHub-hosted Ubuntu runner, so the entry can be
+# validated and its artifacts produced without a local Docker installation.
+#
+# Required repository secrets:
+#   HF_TOKEN        a Hugging Face read token with the gated PLE dataset accepted
+#   OPENAI_API_KEY  key for a local model_api of the form openai/<model>
+# Optional:
+#   JUDGE_API_KEY / JUDGE_BASE_URL  judge for rubric and checks-judge tasks
+#   MODEL_BASE_URL                  for openai-compatible/<model>
+
+name: ple-dev-run
+
+on:
+  workflow_dispatch:
+    inputs:
+      tasks:
+        description: "Comma-separated dev task ids (empty = all 29)"
+        required: false
+        default: ""
+
+jobs:
+  dev:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    env:
+      HF_TOKEN: ${{ secrets.HF_TOKEN }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      MODEL_BASE_URL: ${{ secrets.MODEL_BASE_URL }}
+      JUDGE_API_KEY: ${{ secrets.JUDGE_API_KEY }}
+      JUDGE_BASE_URL: ${{ secrets.JUDGE_BASE_URL }}
+    steps:
+      - name: Check out the harness
+        uses: actions/checkout@v4
+        with:
+          path: harness
+
+      - name: Check out the PLE kit
+        uses: actions/checkout@v4
+        with:
+          repository: google-research/ple
+          path: ple
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install Harbor
+        run: uv tool install harbor==0.20.0 --with websockets
+
+      - name: Docker info
+        run: docker version
+
+      - name: Offline unit tests
+        working-directory: harness
+        run: python3 test_mcp_tools.py
+
+      - name: kit check
+        working-directory: ple
+        run: uv run python -m kit check ../harness
+
+      - name: Run the dev set
+        working-directory: ple
+        run: |
+          if [ -n "${{ inputs.tasks }}" ]; then
+            uv run python eval/run.py ../harness --tasks "${{ inputs.tasks }}"
+          else
+            uv run python eval/run.py ../harness
+          fi
+
+      - name: Upload artifacts and run output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ple-dev-output
+          path: |
+            harness/artifacts
+            ple/runs
+          if-no-files-found: warn
+          retention-days: 14
