@@ -32,6 +32,7 @@ import json
 import os
 import re
 
+import deliverable_check
 import mcp_tools
 import openai
 import taskbridge
@@ -473,6 +474,7 @@ async def solve(session):
     left = session.time_left()
     return left is None or left - wrap_up >= MIN_STEP_SEC
 
+  await deliverable_check.start(session)
   registry = await mcp_tools.discover(session)
   await session.log(
       "mcp: " + (", ".join(registry.servers) if registry.servers else "none")
@@ -496,9 +498,11 @@ async def solve(session):
   for _ in range(MAX_FIX_ROUNDS):
     if not time_for(until(CHECK_SHARE / 2)):
       break
+    inventory = await deliverable_check.report(session)
     review = (
         f"## Task\n{task}\n\n## Plan\n{plan}\n\n## The engineer's"
         f" summary\n{summary}"
+        + (f"\n\n## Files on disk\n{inventory}" if inventory else "")
     )
     verdict = await agent(
         session,

@@ -25,9 +25,12 @@ that a task serves. This entry closes that gap.
    must deliver, or query the CAD model. The planner and the verifier get only
    the MCP tools whose names read like readers (`get/list/read/query/...`) and
    not like writers, so verification cannot modify the project.
-4. **Verify**: a fresh-context verifier re-opens each deliverable and replies
-   `PASS` or a numbered list of gaps; up to two fix rounds are fed back to the
-   worker while time remains.
+4. **Verify**: a fresh-context verifier receives the task, the plan, the
+   worker's summary **and a deterministic inventory** of every file created or
+   changed since the task started (path, size, and a cheap empty/invalid-JSON
+   flag), so it starts from what exists instead of exploring. It replies `PASS`
+   or a numbered list of gaps; up to two fix rounds go back to the worker while
+   time remains.
 
 Time budgeting is inherited from `plan-verify`: the planner gets 10% of the
 task clock, the worker wraps up with 25% left, and verification/fix rounds use
@@ -39,6 +42,7 @@ what remains, with a 4-minute wrap-up per step.
 |---|---|
 | `serve.py` | Planner/worker/verifier loop, time budgeting, MCP wiring |
 | `mcp_tools.py` | MCP discovery, tool-definition synthesis, call routing |
+| `deliverable_check.py` | Deterministic inventory of files written, fed to the verifier |
 | `taskbridge.py` | Serve protocol implementation (from the official kit) |
 | `test_mcp_tools.py` | Offline unit test of discovery and routing (stub server) |
 | `requirements.txt` | Pinned `openai` and `websockets` |
