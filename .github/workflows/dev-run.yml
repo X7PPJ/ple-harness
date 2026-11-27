@@ -17,6 +17,11 @@ on:
         description: "Comma-separated dev task ids (empty = all 29)"
         required: false
         default: ""
+      skip_kit_check:
+        description: "Skip kit check (it validates the entry, not the run; useful when the runner kills long Docker steps)"
+        type: boolean
+        required: false
+        default: false
       local_model:
         description: "Run the dev set on the repository's own model (rewrites submission.yaml in this job only)"
         type: boolean
@@ -109,6 +114,7 @@ jobs:
           python3 test_budget.py
 
       - name: kit check
+        if: ${{ !inputs.skip_kit_check }}
         working-directory: ple
         run: uv run python -m kit check ../harness
 
