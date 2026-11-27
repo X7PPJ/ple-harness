@@ -31,6 +31,7 @@ jobs:
       MAX_OUTPUT_TOKENS: "8000" 
       JUDGE_API_KEY: ${{ secrets.JUDGE_API_KEY }}
       JUDGE_BASE_URL: ${{ secrets.JUDGE_BASE_URL }}
+      JUDGE_MODEL: ${{ secrets.JUDGE_MODEL }}
     steps:
       - name: Check out the harness
         uses: actions/checkout@v4
