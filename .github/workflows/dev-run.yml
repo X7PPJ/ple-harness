@@ -54,6 +54,9 @@ jobs:
       - name: Docker info
         run: docker version
 
+      - name: Install harness test dependencies
+        run: python3 -m pip install --quiet openai websockets
+
       - name: Offline unit tests
         working-directory: harness
         run: python3 test_mcp_tools.py
