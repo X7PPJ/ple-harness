@@ -143,6 +143,13 @@ Three observations we expect to report in final form:
 - **MCP read/write heuristic.** Name-based classification can mislabel a tool;
   a mislabelled writer would only reach the non-writing roles, and the worker
   keeps the full catalogue either way.
+- **Heavy task images.** Twelve of the 29 dev tasks ship an image that installs a
+  full engineering workstation (FreeCAD, LibreOffice, PostgreSQL, MySQL, nginx,
+  PHP); the PLE docs put those images at about 17 GB in total. A free CI runner
+  builds the seventeen light images comfortably but is not a reliable place to
+  build the heavy ones, so the dev artifacts here cover the light tasks and the
+  heavy ones report 0 in the average. A local Docker host or a larger runner
+  removes that limitation without any change to the harness.
 - **Next.** A deterministic unit-and-dimension checker (SI base units, load
   combinations, code-clause references) that runs between work and verify, and
   a cost-aware planner that assigns a token budget per deliverable.
@@ -157,6 +164,20 @@ uv run python eval/run.py ../harness      # writes artifacts/ + runs/
 ```
 
 `.github/workflows/dev-run.yml` runs the same two commands on a GitHub-hosted
-Ubuntu runner, which is how the artifacts in this repository were produced when
-no local Docker installation was available. `artifacts/` is exactly that run's
-output; it is not edited by hand, and the harness never reads it.
+Ubuntu runner. That is how the artifacts in this repository were produced: the
+development machine had no Docker installation, so the kit and the dev set run
+in CI instead. The workflow reproduces the two commands a local run would use,
+plus three environment fixes the runner needs: it deletes preinstalled
+toolchains to free disk, adds an 8 GiB swap file, and passes the model key
+through repository secrets so the entry itself never contains one.
+
+`PLE_TASK_BUDGET_SEC` caps the wall clock the harness spends inside a single
+task. Unset, the harness uses whatever the task allows; set, the planner,
+worker, verifier and fix rounds are budgeted inside the smaller window. That is
+what lets one CI job cover many dev tasks without hitting the job timeout, and
+it is the same code path — only the denominator of the time shares changes.
+
+`artifacts/` is exactly that run's output; it is not edited by hand, and the
+harness never reads it. `scripts/fetch_artifacts.py` downloads the run's
+artifact archive and unpacks it into `artifacts/` so the commit matches the
+workflow's output byte for byte.
