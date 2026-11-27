@@ -30,6 +30,7 @@ not to modify any files.
 import asyncio
 import json
 import os
+import time
 import re
 
 import deliverable_check
@@ -52,7 +53,7 @@ WRAP_UP = {
     "role": "user",
     "content": "Time is up for this step. Stop and reply with your answer.",
 }
-RESULT_CHARS = 20_000  # a longer tool result loses its middle
+RESULT_CHARS = 12_000  # a longer tool result loses its middle
 # Seconds between retries once the SDK's own quick retries are exhausted.
 RETRY_WAITS = (5, 15, 30, 60, 120)
 # How endpoints word a 400 saying the conversation no longer fits the context
@@ -82,6 +83,10 @@ CHECK_SHARE = 0.25
 # wrap-up
 MIN_STEP_SEC = 120
 MAX_FIX_ROUNDS = 2
+# Caps that bound one agent step. Every tool round resends the history, so a
+# step that keeps calling tools costs superlinearly; these stop it.
+MAX_STEPS = int(os.environ.get("PLE_MAX_STEPS", "45"))
+TOKEN_BUDGET = int(os.environ.get("PLE_TOKEN_BUDGET", "12000000"))
 # Optional wall-clock budget per task, in seconds. Unset uses the task's
 # own limit; a value caps how long the harness spends before wrapping up,
 # which lets a single CI job cover many dev tasks.
@@ -335,7 +340,8 @@ def conversation(system, session, prompt):
   ]
 
 
-async def agent(session, messages, tools, until, final=False, registry=None):
+async def agent(session, messages, tools, until, final=False, registry=None,
+                deadline=None):
   """Runs the tool-calling loop on `messages` until the model answers.
 
   Prompts the model to wrap up immediately once fewer than `until` seconds
@@ -349,15 +355,24 @@ async def agent(session, messages, tools, until, final=False, registry=None):
     until: Remaining task time threshold (in seconds) at which this step wraps
       up.
     final: Whether to record responses in `session.final_message`.
+    deadline: Absolute `time.monotonic()` value at which this step must stop,
+      used with a capped task budget; `None` follows the task clock only.
 
   Returns:
     The final text response produced by this agent step.
   """
   # head: the start of an answer cut off at the output limit
   nudges, head, waits = 0, "", iter(RETRY_WAITS)
+  steps, spent = 0, 0
   while True:
     left = session.time_left()  # None when the task has no time limit
-    wrap_up = left is not None and left < until
+    if deadline is not None:
+      remaining = deadline - time.monotonic()
+      left = remaining if left is None else min(left, remaining)
+    # A step that has used its rounds or its token allowance wraps up now, on
+    # the same path the clock uses, so it still leaves a written deliverable.
+    exhausted = steps >= MAX_STEPS or spent >= TOKEN_BUDGET
+    wrap_up = exhausted or (left is not None and left < until)
     if wrap_up and messages[-1:] != [WRAP_UP]:  # asked once, also on a retry
       messages.append(dict(WRAP_UP))
     # A call still running when the wrap-up starts is stopped. The wrap-up call
@@ -391,6 +406,7 @@ async def agent(session, messages, tools, until, final=False, registry=None):
       raise
     waits = iter(RETRY_WAITS)
     if reply.usage:
+      spent += reply.usage.prompt_tokens + reply.usage.completion_tokens
       details = getattr(reply.usage, "prompt_tokens_details", None)
       await session.usage(
           MODEL,
@@ -427,6 +443,7 @@ async def agent(session, messages, tools, until, final=False, registry=None):
       })
       continue
     nudges, head = 0, ""
+    steps += 1
     messages.append(turn)
     for call in turn["tool_calls"]:
       await session.log(
@@ -438,8 +455,7 @@ async def agent(session, messages, tools, until, final=False, registry=None):
       )
     if left is not None:
       messages[-1]["content"] += (
-          f"\n[{int((session.time_left() - until) // 60)} minutes left for this"
-          " step]"
+          f"\n[{int((left - until) // 60)} minutes left for this step]"
       )
 
 
@@ -455,6 +471,9 @@ async def solve(session):
   total = session.time_left()
   if TASK_BUDGET_SEC and (total is None or total > TASK_BUDGET_SEC):
     total = TASK_BUDGET_SEC
+  # The task clock may be hours long; a capped budget also needs an absolute
+  # deadline, because the task clock alone never reaches the smaller cap.
+  deadline = None if total is None else time.monotonic() + total
 
   def until(share):
     """Computes the remaining seconds when `share` of total task time is left.
@@ -495,11 +514,13 @@ async def solve(session):
       check_tools,
       until(1 - PLAN_SHARE),
       registry=registry,
+      deadline=deadline,
   )
   await session.log(f"plan: {plan[:1000]}")
   work = conversation(WORKER, session, f"{task}\n\n## Plan\n{plan}")
   summary = await agent(
-      session, work, work_tools, until(CHECK_SHARE), final=True, registry=registry
+      session, work, work_tools, until(CHECK_SHARE), final=True, registry=registry,
+      deadline=deadline,
   )
   for _ in range(MAX_FIX_ROUNDS):
     if not time_for(until(CHECK_SHARE / 2)):
@@ -516,6 +537,7 @@ async def solve(session):
         check_tools,
         until(CHECK_SHARE / 2),
         registry=registry,
+        deadline=deadline,
     )
     await session.log(f"verifier: {verdict[:1000]}")
     # PASS alone in any letter case (Markdown emphasis and a full stop aside),

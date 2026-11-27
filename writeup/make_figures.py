@@ -63,6 +63,13 @@ def disciplines(root):
   return mapping
 
 
+def _as_tokens(value):
+  """A run may record tokens as a number or as a per-kind dict."""
+  if isinstance(value, dict):
+    return sum(float(v or 0.0) for v in value.values())
+  return float(value or 0.0)
+
+
 def tasks_from_run(run_dir):
   """Returns {task: {"reward", "status", "tokens"}} from a run directory."""
   data = _read(pathlib.Path(run_dir) / "results.json")
@@ -83,7 +90,7 @@ def tasks_from_run(run_dir):
     out[name] = {
         "reward": float(row.get("reward") or row.get("score") or 0.0),
         "status": str(row.get("status") or row.get("ended") or "ok"),
-        "tokens": float(tokens or 0.0),
+        "tokens": _as_tokens(tokens),
     }
   return out
 
@@ -146,26 +153,45 @@ def figure_architecture(out):
 
 
 def figure_score_cost(tasks, out):
-  pts = [(t["tokens"], t["reward"], name) for name, t in tasks.items() if t["tokens"] > 0]
+  """Reward against spend, split by whether the task was actually graded.
+
+  A task the evaluator could not grade sits at reward 0 for real spend, which
+  would read as "expensive and useless". Plotting those apart keeps the figure
+  honest about which zeros are the harness's and which are the environment's.
+  """
+  graded = [(t["tokens"], t["reward"], name) for name, t in tasks.items()
+            if t["tokens"] > 0 and t["status"] == "ok"]
+  ungraded = [(t["tokens"], t["reward"], name) for name, t in tasks.items()
+              if t["tokens"] > 0 and t["status"] != "ok"]
   fig, ax = plt.subplots(figsize=(7.6, 4.6), dpi=200)
-  if not pts:
-    ax.text(0.5, 0.5, "no token usage recorded", ha="center", va="center", transform=ax.transAxes)
+  if not graded and not ungraded:
+    ax.text(0.5, 0.5, "no token usage recorded", ha="center", va="center",
+            transform=ax.transAxes)
   else:
-    xs = [p[0] / 1000.0 for p in pts]
-    ys = [p[1] for p in pts]
-    ax.scatter(xs, ys, s=34, color=ACCENT, alpha=0.75, edgecolor="white", linewidth=0.6)
-    order = sorted(range(len(xs)), key=lambda i: xs[i])
-    best, frontier = -1.0, []
-    for i in order:
-      if ys[i] > best:
-        best = ys[i]
-        frontier.append(i)
-    ax.plot([xs[i] for i in frontier], [ys[i] for i in frontier], color=WARN, lw=1.4,
-            label="score frontier")
-    ax.legend(frameon=False, fontsize=8, loc="lower right")
-  ax.set_xlabel("tokens per task (thousands)")
+    if graded:
+      ax.scatter([p[0] / 1000.0 for p in graded], [p[1] for p in graded],
+                 s=40, color=ACCENT, alpha=0.85, edgecolor="white", linewidth=0.6,
+                 label=f"graded ({len(graded)})")
+    if ungraded:
+      ax.scatter([p[0] / 1000.0 for p in ungraded], [p[1] for p in ungraded],
+                 s=40, color="#b0b7c3", alpha=0.9, edgecolor="white", linewidth=0.6,
+                 marker="s", label=f"grader failed ({len(ungraded)})")
+    if graded:
+      pts = sorted(graded, key=lambda p: p[0])
+      best, frontier = -1.0, []
+      for point in pts:
+        if point[1] > best:
+          best = point[1]
+          frontier.append(point)
+      ax.plot([p[0] / 1000.0 for p in frontier], [p[1] for p in frontier],
+              color=WARN, lw=1.4, label="best reward so far")
+    ax.legend(frameon=False, fontsize=8, loc="center right")
+  ax.set_xlabel("tokens spent on the task (thousands)")
   ax.set_ylabel("task reward (0–1)")
-  ax.set_title("Figure 2 — what extra spend buys on the 29 dev tasks", fontsize=10, color=INK)
+  n = len(graded) + len(ungraded)
+  ax.set_title(f"Figure 2 — reward vs spend on {n} dev task(s): "
+               f"{len(graded)} graded, {len(ungraded)} grader failure(s)",
+               fontsize=9.5, color=INK)
   ax.spines[["top", "right"]].set_visible(False)
   ax.grid(alpha=0.18, linewidth=0.6)
   fig.savefig(out / "fig2_score_cost.png", bbox_inches="tight", facecolor="white")

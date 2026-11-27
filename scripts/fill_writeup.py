@@ -60,18 +60,21 @@ def run_usage(root):
     data = load_json(run / "results.json")
     if not data:
       continue
-    usage = {}
+    usage, seconds = {}, {}
     for row in data.get("tasks") or []:
-      name = row.get("task") or row.get("id")
+      name = row.get("id") or row.get("task")
       if not name:
         continue
-      u = row.get("usage") or {}
-      tokens = row.get("tokens") or u.get("total_tokens") or (
-          (u.get("prompt_tokens") or 0) + (u.get("completion_tokens") or 0))
-      usage[name] = float(tokens or 0)
+      raw_tokens = row.get("tokens")
+      if isinstance(raw_tokens, dict):
+        tokens = sum(float(v or 0) for v in raw_tokens.values())
+      else:
+        tokens = float(raw_tokens or 0)
+      usage[name] = tokens
+      seconds[name] = float(row.get("seconds") or 0)
     if usage:
-      return usage
-  return {}
+      return usage, seconds
+  return {}, {}
 
 
 def main():
@@ -85,7 +88,7 @@ def main():
   if not rows:
     print("no artifacts/manifest.json with tasks; nothing to fill")
     return 1
-  usage = run_usage(root)
+  usage, seconds = run_usage(root)
   total = len(rows)
   scored = [r for r in rows if r[1] > 0]
   mean_reward = sum(r[1] for r in rows) / total
@@ -93,6 +96,8 @@ def main():
   tokens = [usage.get(r[0], 0.0) for r in rows]
   tok_total = sum(tokens)
   tok_mean = tok_total / max(1, len([t for t in tokens if t > 0]))
+  secs = [seconds.get(r[0], 0.0) for r in rows]
+  secs_total = sum(secs)
 
   values = {
       "DEV_SCORE": f"{mean_reward:.3f}",
@@ -100,7 +105,8 @@ def main():
       "HIGH": str(len(high)),
       "COST_USD": f"{tok_total / 1e6:.2f}M tokens",
       "TOKENS_PER_TASK": f"{tok_mean / 1000:.0f}k",
-      "WALL_CLOCK": f"{len(rows)} tasks in one CI job",
+      "WALL_CLOCK": (f"{secs_total / 3600:.1f} h of task time across {total} tasks"
+                     if secs_total else f"{total} tasks in one CI job"),
   }
 
   writeup = root / "writeup" / "WRITEUP.md"
