@@ -1,0 +1,48 @@
+# CFDME-2025-041 — E119 companion validation crossing-time worksheet
+# Document: CFDME-2025-041-VAL-CALC-01, rev A, dated 10/10/2025
+# Supporting worksheet for CFDME-2025-041-VAL-MEMO-01 rev A. Supporting material only.
+# Sources:
+#   Simulation: Projects/CFDME-2025-041_Ocotillo_WUI/Validation/E119_companion_sim_results.csv
+#               (181 data rows, 1 min cadence, t = 0-180 min; initial ambient 21.0 degC)
+#   Test:       Red Butte Fire & Materials Testing report RBFMT-25-0918 (09/24/2025), sections 5.1-5.3
+#   Procedure:  CFDME-QA-VAL-002 rev 2 (Validation QA Procedure), sections 3-6
+#   Certification: IWFPE-CERT-25-0374 (09/29/2025), sections 1.2, 2, 3
+# Method: criteria are rises above initial ambient. Absolute thresholds = rise + 21.0 degC.
+#         Crossing = linear interpolation between the two adjacent 1 min samples that straddle the threshold.
+#         Headline results are reported to the nearest minute.
+quantity,value,unit,basis
+initial_ambient,21.0,degC,t = 0 row of E119_companion_sim_results.csv (all five columns)
+average_criterion_threshold_rise,139,degC,RBFMT-25-0918 section 5.1 (nine-TC mean; ASTM E119 average criterion)
+single_point_criterion_threshold_rise,181,degC,RBFMT-25-0918 section 5.2 (single TC; ASTM E119 single-point criterion)
+average_threshold_absolute,160.0,degC,21.0 degC + 139 degC
+single_point_threshold_absolute,202.0,degC,21.0 degC + 181 degC
+single_point_crossing_interpolated,130.9,min,linear interpolation between adjacent 1 min samples (130 min and 131 min)
+single_point_crossing_nearest_minute,131,min,reported S; rounded from 130.9 min
+average_crossing_interpolated,176.1,min,linear interpolation between adjacent 1 min samples (176 min and 177 min)
+average_crossing_nearest_minute,176,min,rounded from 176.1 min
+criteria_separation_run,45.2,min,176.1 min - 130.9 min (45 min to the nearest minute)
+criteria_separation_test,45,min,163 min - 118 min (RBFMT-25-0918 sections 5.1-5.3)
+criteria_separation_difference,0.2,min,45.2 min - 45 min (0.4 % of 45 min)
+governing_point_above_mean_run,91.2,degC,202.1 degC - 110.9 degC at 131 min (181.1 degC rise - 89.9 degC rise)
+governing_point_above_mean_test,85,degC,181 degC rise - approx. 96 degC mean rise at 118 min (RBFMT-25-0918 section 5.2)
+governing_point_above_mean_difference,6.2,degC,91.2 degC - 85 degC (+7 % of 85 degC)
+S,131,min,companion run; single-point analog crossing reported to the nearest minute
+D,118,min,RBFMT-25-0918 section 5.3; certified test of record for IWFPE-CERT-25-0374
+E,13,min,S - D; positive sign retained (model over-predicts endurance)
+u_num,4,min,Procedure section 4 class default
+u_inp,6,min,Procedure section 4 class default
+u_exp,5,min,Procedure section 4 class default
+u_val,8.77,min,root-sum-square of 4 min / 6 min / 5 min components
+u_val_reported,9,min,Procedure section 4 (reported to whole minutes)
+acceptance_criterion,11.8,min,0.10 x 118 min (Procedure section 5; not rounded to 12 min)
+primary_margin,1.2,min,13 min - 11.8 min over the criterion
+secondary_margin,4.23,min,13 min - 8.77 min over the unrounded u_val
+secondary_margin_reported,4,min,13 min - 9 min over the reported u_val
+max_prediction_clearing,129.8,min,118 min + 11.8 min
+max_prediction_clearing_whole_minute,129,min,largest whole-minute S with |E| <= 11.8 min (130 min gives 12 min)
+D_sensitivity_129,129,min,hypothetical D from Ocotillo revised burn data (inadmissible)
+E_sensitivity_129,2,min,131 min - 129 min
+criterion_sensitivity_129,12.9,min,0.10 x 129 min
+tie_guardrail_crossing,101,min,T_tie_C at 181 degC rise; wrong quantity (no direct RBFMT TC equivalent)
+absolute_181_guardrail_crossing,117.6,min,T_unexposed_max_C at 181 degC absolute; wrong rule (criterion is a rise)
+absolute_139_guardrail_crossing,155.9,min,T_unexposed_avg_C at 139 degC absolute (155 min 138.0 degC; 156 min 139.1 degC); wrong rule (criterion is a rise)

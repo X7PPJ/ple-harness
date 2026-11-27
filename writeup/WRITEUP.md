@@ -90,12 +90,12 @@ cannot finish.
 
 | | value |
 |---|---|
-| Dev score (mean over 29 tasks) | `[[DEV_SCORE]]` |
-| Tasks with a non-zero score | `[[NONZERO]]` / 29 |
-| Tasks at or above 0.8 | `[[HIGH]]` / 29 |
-| Total model cost | `[[COST_USD]]` |
-| Total wall clock | `[[WALL_CLOCK]]` |
-| Mean tokens per task | `[[TOKENS_PER_TASK]]` |
+| Dev score (mean over 29 tasks) | `0.449` |
+| Tasks with a non-zero score | `3` / 29 |
+| Tasks at or above 0.8 | `1` / 29 |
+| Total model cost | `458.89M tokens` |
+| Total wall clock | `3.7 h of task time across 5 tasks` |
+| Mean tokens per task | `91778k` |
 
 **Figure 2 — score vs cost.** `[[FIGURE_2_DESCRIPTION]]` Each point is one dev
 task (tokens on the x-axis, reward on the y-axis); the frontier shows where

@@ -1,0 +1,113 @@
+{
+  "format": 1,
+  "dev_set": "85ad6d96fbf76ee64d9fb6339b3bf342b07128a2ebadc0a10f008c95dac01a48",
+  "created": "2026-11-27T20:34:01Z",
+  "harness": {
+    "name": "plan-verify-mcp",
+    "model_api": "openai-compatible/deepseek-chat",
+    "tree": "61d709784c8bc9437cdaf0dc205a819082837315010565f7ffbc3b1835964909",
+    "files": {
+      ".github/workflows/debug-build.yml": "100644 be18c8a1f803c42ae4fc23e08789ab075efd71ff",
+      ".github/workflows/dev-run.yml": "100644 a4fab279523bf625ec26c7d5380e2a11cafac557",
+      ".gitignore": "100644 fda3ba9bfb473fac576abce66431240652b74131",
+      "LICENSE": "100644 261eeb9e9f8b2b4b0d119366dda99c6fd7d35c64",
+      "README.md": "100644 fe9b5abedc18d2685e3446e11c6f2569173c9823",
+      "deliverable_check.py": "100644 7bed81bf50b58f6bc8bbf5551a35c04e2af40829",
+      "mcp_tools.py": "100644 adf70f98a8b8c504c7d50120a45ffda737630726",
+      "requirements.txt": "100644 13ba6dbe5a230d71da63dd42ee49e86f580056dc",
+      "scripts/fetch_artifacts.py": "100644 eca6070ee2d47b45022abd046a66bfc2934bccb3",
+      "serve.py": "100644 a8b7dd317de8a2f17fe232c78117491c6dcd6907",
+      "submission.yaml": "100644 8d5281f6639d1bb10dd0b3cad1d94dc4df6fa2a6",
+      "submit_check.py": "100644 0f86dccf0eae22ffb3b3d834a7a50073930c0bec",
+      "taskbridge.py": "100644 26cc3d6cf8dbcaed859731ce9a6881f4ca8bfe40",
+      "test_mcp_tools.py": "100644 da0649d3729ef0dbfdd4d61e7e8d86e9787596a6",
+      "writeup/WRITEUP.md": "100644 5c331817a8eb85e97b722ba23200342c8b7cf171",
+      "writeup/figs/fig1_architecture.png": "100644 26f24e71ec5855d164690e77c4f2ea35127c367e",
+      "writeup/figs/fig2_score_cost.png": "100644 1168a02ab1f749a67a8faee4905833cd386ed6e7",
+      "writeup/figs/fig3_failures.png": "100644 c9563a710377c8bea168ce49c04b848a1bebc25a",
+      "writeup/make_figures.py": "100644 cbddc932fdff7b5ed08c4daad03c153bceee5543"
+    },
+    "commit": "fff1334046d0e8a909823c1f7caf94e087ffa9af",
+    "dirty": false
+  },
+  "tasks": {
+    "data-center-site-model": {
+      "run": "plan-verify-mcp-20261127-164029",
+      "trial": "data-center-site-model__e6o8HRq",
+      "ended": "ok",
+      "reward": 1.0,
+      "tree": "61d709784c8bc9437cdaf0dc205a819082837315010565f7ffbc3b1835964909",
+      "dev_set": "85ad6d96fbf76ee64d9fb6339b3bf342b07128a2ebadc0a10f008c95dac01a48",
+      "files": {
+        "app/files/frontier__DCBim__p6_002/submission/model.ifc": "369ba0c2e050047ffd2f223ee6f0bce8aa655077"
+      },
+      "final_message": "ef151f06449d830ab8f7f71c6600313ba9443bea",
+      "deleted": [],
+      "skipped": []
+    },
+    "data-hall-mep-routing": {
+      "run": "plan-verify-mcp-20261127-164029",
+      "trial": "data-hall-mep-routing__WgJXci6",
+      "ended": "ok",
+      "reward": 0.0,
+      "tree": "61d709784c8bc9437cdaf0dc205a819082837315010565f7ffbc3b1835964909",
+      "dev_set": "85ad6d96fbf76ee64d9fb6339b3bf342b07128a2ebadc0a10f008c95dac01a48",
+      "files": {
+        "app/files/dc_model__hall_seed000_d000__mep_routing/output/solution.py": "df3ed6cda59eb814598e28d81983d3f53473fe48"
+      },
+      "final_message": "88a20b4cee0a496ff0050d05fba10e2e8529b673",
+      "deleted": [],
+      "skipped": []
+    },
+    "data-hall-mep-routing-offset": {
+      "run": "plan-verify-mcp-20261127-164029",
+      "trial": "data-hall-mep-routing-offset__BY7uF2P",
+      "ended": "ok",
+      "reward": 0.0,
+      "tree": "61d709784c8bc9437cdaf0dc205a819082837315010565f7ffbc3b1835964909",
+      "dev_set": "85ad6d96fbf76ee64d9fb6339b3bf342b07128a2ebadc0a10f008c95dac01a48",
+      "files": {
+        "app/files/dc_model__hall_seed005_d100__mep_routing/output/solution.py": "181c953afa29197d14ad881a9abc35fbb03bcf1f"
+      },
+      "final_message": "63cef3e3ee96fc6cad2f2fcb0e5b9b3f941b657d",
+      "deleted": [],
+      "skipped": []
+    },
+    "fire-test-validation-memo": {
+      "run": "plan-verify-mcp-20261127-164029",
+      "trial": "fire-test-validation-memo__9pZ7rK3",
+      "ended": "ok",
+      "reward": 0.519231,
+      "tree": "61d709784c8bc9437cdaf0dc205a819082837315010565f7ffbc3b1835964909",
+      "dev_set": "85ad6d96fbf76ee64d9fb6339b3bf342b07128a2ebadc0a10f008c95dac01a48",
+      "files": {
+        "app/files/output/CFDME-2025-041_validation_crossing_calc_revA.csv": "bca1db4dcbe2ea487363c4e6ff8963606b870545",
+        "app/files/output/CFDME-2025-041_validation_memo_revA.docx": "3bd1d6c1c5054c98ff83f1faa73c38b8d62403ac"
+      },
+      "final_message": "c93ba2d069398078218adac81bda3418ed70180c",
+      "deleted": [],
+      "skipped": []
+    },
+    "landscape-sheet-revision": {
+      "run": "plan-verify-mcp-20261127-164029",
+      "trial": "landscape-sheet-revision__pv3yome",
+      "ended": "ok",
+      "reward": 0.727273,
+      "tree": "61d709784c8bc9437cdaf0dc205a819082837315010565f7ffbc3b1835964909",
+      "dev_set": "85ad6d96fbf76ee64d9fb6339b3bf342b07128a2ebadc0a10f008c95dac01a48",
+      "files": {
+        "app/files/output/Callaway_L-Series_Turf_and_Schedule_Memo_2026-10-31.docx": "dad62e446ff4deae8d3101df1ef75b3bab307025",
+        "app/files/output/Callaway_L-Series_Turf_and_Schedule_Memo_2026-10-31.pdf": "627d37cf5f8390448c9fdd32442aec55b9a730d8",
+        "app/files/output/LS-01_L-Series_Reconciliation_and_Schedule_Backup.xlsx": "8d5076669543126ee578e2cb460e8085d3c9a970",
+        "app/files/output/PLAN.md": "694b3b80b0a75084d55b89b29be44b7218403a0c",
+        "app/files/output/_build_memo.py": "902315c4b3458e5ce97bc2094d19c0882e6c8135",
+        "app/files/output/_build_workbook.py": "817022a69149815fdbcd05d4e3972acc0f915a37",
+        "app/files/output/_docx_to_md.py": "c3e0001cfa5ceca31e2e53c6e34e92dd0144fdec",
+        "app/files/output/drafts/Callaway_L-Series_Turf_and_Schedule_Memo_2026-10-31_DRAFT.md": "12a8364d45b769705e1a2b33966e4d9c20887cc9"
+      },
+      "final_message": "b520e015cc794c7e5f2166721c12e6199a932dbb",
+      "deleted": [],
+      "skipped": []
+    }
+  }
+}

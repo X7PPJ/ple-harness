@@ -1,0 +1,21 @@
+All six items are fixed and the package regenerated (DOCX → PDF → markdown, workbook, PLAN). Final state: 15 pages, zero margin violations, no literal markdown, workbook and memo in agreement, nothing outside `output/` touched.
+
+**Deliverables (unchanged locations)**
+
+- `output/Callaway_L-Series_Turf_and_Schedule_Memo_2026-10-31.docx` + `.pdf` — memo to Garrett Nokes (cc Vogel, Kessler), dated October 31, 2026, §§1–9, Attachments A–C.
+- `output/LS-01_L-Series_Reconciliation_and_Schedule_Backup.xlsx` — five tabs; Source Register now 24 documents, Schedule tab now 24 dated rows.
+- `output/drafts/Callaway_L-Series_Turf_and_Schedule_Memo_2026-10-31_DRAFT.md` — memo text extracted from the DOCX.
+- `output/PLAN.md` — method, earlier corrections, and a new §8 recording this pass.
+
+**The six fixes**
+
+1. **Parcel designation and CC&R support.** §4 now uses the reconciled label — "Common-Area Parcel **'D'** on the final map and civil plans, called **Parcel A** on the Phase 3 landscape sheets" — and distinguishes it from the recorded declaration's Parcel A (the Phases 1/2 park). It cites CC&Rs Instrument No. 20241223-0004422, Bk 175, Pg 61, §§2.6, 3.2(c) and 3.3, and states HOA ownership/maintenance as **an obligation to be perfected on recordation** under Condition 16, not a completed conveyance. Attachment B and workbook tabs 2–3 relabelled; the CC&R added to Attachment C and to tab 5.
+2. **Workbook tab 4 vs. memo.** Tab 4 now mirrors §6 row for row — separate **11/06** notice to Comprehensive Planning, **11/10** decision 3, **11/13** decision 4 — and adds the missing **12/04** decision-5 row.
+3. **Irrigation rounding.** Attachment B and tab 3 show the computed totals **3.287 / 4.208 / 2.307**, the carried figures (3.28 / 4.21 / 2.31) alongside, and deltas **+0.921 / −0.980**, with a note explaining that the worksheet's 3.28 is its Summary figure (2.83 + 0.45) and that subtracting the rounded 3.28 would give +0.93 / −0.97.
+4. **Attachment C estimate row.** Now lists the lines actually used — 7.02, 7.09, 7.11–7.14, 7.16, 7.17, 7.41, 7.43 — and states that 7.01 is **not** used because its 80,000 sf allowance already covers the planted footprint.
+5. **§5 Planning Commission claim.** Rewritten to "**No Planning Commission hearing is scheduled, and the County's review cycle alone ends 12/29/2026.**" The §5 table carries the PC date as "not scheduled — no date appears in the record" and adds a second-round row at 12/29/2026 as the controlling blocker; the unsupported "cannot conclude before 12/23" assertion is gone.
+6. **§6.1 gate list.** Added **F-1** (CCFD second access; call 11/10, due 11/22) and **G-8** (NDEP NVR100000 NOI; status 11/13, due 11/22), plus a paragraph stating the other 24 General Comments are being worked to the tracker's 11/22/2026 date and are not re-planned or vouched for here — if any slips, 11/30 slips.
+
+**Also fixed:** a table-rendering defect found while making these edits — the DOCX helper stripped the first and last two characters of any cell opening with `**` in a bold row, which truncated the new Attachment B total. The helper now strips markers only when a cell both opens and closes with `**`; the documents were re-scanned for literal markdown (none).
+
+**Bottom line unchanged: no — do not commit to 12/18/2026, and 11/30 cannot be represented as protecting the map.** Controlling date **12/23/2026** (two years from the 12/23/2024 recording); 11/30 + 20 business days = **12/29/2026** with only 17 business days to 12/23; L‑4 is +150 trees (208 vs 58 on 4,160 lf) on L‑2/L‑1 with Sheet L‑4 unaffected; L‑2 stays open because the 18,400 sf at Parcel D is nonfunctional turf subject to the 12/31/2026 deadline; water moves 3.287 → 4.208 ac‑ft/yr (lawn kept) or 2.307 (lawn deleted); estimate +$45,150 direct, bond to be re-sealed. Decisions 1–2 by 11/06, decision 3 by 11/10, signatory by 11/13, extension decision by 12/04; design review filed 11/25 for the 12/16 TAB; resubmit 11/30 with L‑2/L‑3 pending design review; recordation Q1 2027.
