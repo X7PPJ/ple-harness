@@ -17,6 +17,11 @@ on:
         description: "Comma-separated dev task ids (empty = all 29)"
         required: false
         default: ""
+      task_budget:
+        description: "Wall-clock seconds per task (PLE_TASK_BUDGET_SEC)"
+        type: string
+        required: false
+        default: "900"
       no_swap:
         description: "Skip the swap step (suspect in runner shutdowns)"
         type: boolean
@@ -44,7 +49,7 @@ jobs:
       MODEL_BASE_URL: ${{ secrets.MODEL_BASE_URL }}
       OPENAI_BASE_URL: ${{ secrets.MODEL_BASE_URL }}
       MAX_OUTPUT_TOKENS: "8000"
-      PLE_TASK_BUDGET_SEC: "900" 
+      PLE_TASK_BUDGET_SEC: ${{ inputs.task_budget || '900' }}
       JUDGE_API_KEY: ${{ secrets.JUDGE_API_KEY }}
       JUDGE_BASE_URL: ${{ secrets.JUDGE_BASE_URL }}
       JUDGE_MODEL: ${{ secrets.JUDGE_MODEL }}
