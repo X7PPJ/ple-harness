@@ -13,7 +13,8 @@
 # limitations under the License.
 
 name: plan-verify-mcp
-model_api: google-cloud/claude-opus-5-5
+model_api: openai-compatible/deepseek-chat
+model_base_url: https://api.deepseek.com/v1
 install: >-
   uv venv --python 3.12 /opt/harness/venv
   && uv pip install --python /opt/harness/venv/bin/python -r {src}/requirements.txt

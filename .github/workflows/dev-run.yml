@@ -25,7 +25,10 @@ jobs:
     env:
       HF_TOKEN: ${{ secrets.HF_TOKEN }}
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      MODEL_API_KEY: ${{ secrets.MODEL_API_KEY }}
       MODEL_BASE_URL: ${{ secrets.MODEL_BASE_URL }}
+      OPENAI_BASE_URL: ${{ secrets.MODEL_BASE_URL }}
+      MAX_OUTPUT_TOKENS: "8000" 
       JUDGE_API_KEY: ${{ secrets.JUDGE_API_KEY }}
       JUDGE_BASE_URL: ${{ secrets.JUDGE_BASE_URL }}
     steps:
