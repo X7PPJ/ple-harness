@@ -82,6 +82,10 @@ CHECK_SHARE = 0.25
 # wrap-up
 MIN_STEP_SEC = 120
 MAX_FIX_ROUNDS = 2
+# Optional wall-clock budget per task, in seconds. Unset uses the task's
+# own limit; a value caps how long the harness spends before wrapping up,
+# which lets a single CI job cover many dev tasks.
+TASK_BUDGET_SEC = float(os.environ.get("PLE_TASK_BUDGET_SEC") or 0) or None
 
 # The evaluator sets OPENAI_BASE_URL and OPENAI_API_KEY for every model.
 # The SDK handles quick retries; recover() handles longer backoffs. Because
@@ -449,6 +453,8 @@ async def solve(session):
     The final summary message from the worker.
   """
   total = session.time_left()
+  if TASK_BUDGET_SEC and (total is None or total > TASK_BUDGET_SEC):
+    total = TASK_BUDGET_SEC
 
   def until(share):
     """Computes the remaining seconds when `share` of total task time is left.

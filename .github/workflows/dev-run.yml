@@ -28,7 +28,8 @@ jobs:
       MODEL_API_KEY: ${{ secrets.MODEL_API_KEY }}
       MODEL_BASE_URL: ${{ secrets.MODEL_BASE_URL }}
       OPENAI_BASE_URL: ${{ secrets.MODEL_BASE_URL }}
-      MAX_OUTPUT_TOKENS: "8000" 
+      MAX_OUTPUT_TOKENS: "8000"
+      PLE_TASK_BUDGET_SEC: "900" 
       JUDGE_API_KEY: ${{ secrets.JUDGE_API_KEY }}
       JUDGE_BASE_URL: ${{ secrets.JUDGE_BASE_URL }}
       JUDGE_MODEL: ${{ secrets.JUDGE_MODEL }}
