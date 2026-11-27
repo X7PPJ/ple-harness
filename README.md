@@ -57,6 +57,48 @@ uv run python -m kit check ../harness
 uv run python eval/run.py ../harness
 ```
 
+## How `artifacts/` was produced
+
+`artifacts/` is the output of one `eval/run.py` dev run, not hand-written and
+never read by the harness. Because the development machine had no Docker, that
+run happened on a GitHub-hosted Ubuntu runner
+(`.github/workflows/dev-run.yml`), which reproduces the two commands above and
+adds three environment fixes the runner needs: it deletes preinstalled
+toolchains to free disk, adds swap, and passes keys through repository secrets
+so the entry itself holds none.
+
+Two facts about that run matter when reading the numbers:
+
+- **Model.** The dev run used a model of our own,
+  `openai-compatible/deepseek-chat`, because the sponsored models are only
+  reachable from the organizer's rerun. `submission.yaml` in this repository
+  therefore declares `google-cloud/claude-opus-5-5`, the model the rerun will
+  use; the switch is allowed as long as it is disclosed, which the write-up
+  does in §3 and §5. To reproduce the dev numbers yourself, put your own model
+  back in `submission.yaml` (`model_api:` + `model_base_url:`) and pass the key
+  in `MODEL_API_KEY`.
+- **Coverage.** 5 of the 29 dev tasks produced artifacts. 12 more were attempted
+  and never started — the kit reported `evaluator: RuntimeError` with 0 s and 0
+  tokens, i.e. the task container never came up on the runner — and the 12
+  heaviest task images were not attempted there. A task without artifacts
+  scores 0, so treat the per-task numbers in `artifacts/manifest.json` as "what
+  the harness did on the tasks it got to start", not as a dev score.
+
+## Cost controls
+
+Three environment variables bound a task, because the first dev run showed a
+task can spend a hundred million tokens re-reading files if nothing stops it:
+
+| variable | default | effect |
+|---|---|---|
+| `PLE_TASK_BUDGET_SEC` | unset (task limit) | wall clock the harness may use inside the task |
+| `PLE_MAX_STEPS` | 45 | tool rounds one agent step may take before it must wrap up |
+| `PLE_TOKEN_BUDGET` | 12000000 | tokens one agent step may spend before it must wrap up |
+
+A step that hits a cap takes the same wrap-up path the clock uses, so it still
+writes its deliverable. `RESULT_CHARS` (12,000) bounds a single tool result,
+since the history is resent on every round.
+
 ## License
 
 Apache 2.0. `serve.py`, `taskbridge.py` and the role prompts are derived from
