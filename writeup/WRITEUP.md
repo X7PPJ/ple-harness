@@ -1,6 +1,6 @@
 # plan-verify-mcp: giving an engineering agent its project's own tools
 
-**Team X7PPJ · PLE 2026 · repo `[[GITHUB_URL]]` · commit `[[COMMIT_SHA]]`**
+**Team X7PPJ · PLE 2026 · repo `https://github.com/X7PPJ/ple-harness` · commit `0fe3fa32`**
 
 > Draft. Numbers marked `[[…]]` are filled from the dev-set run (`manifest.json`,
 > `runs/*/results.json`) once the harness has been executed under `eval/run.py`.
@@ -47,20 +47,19 @@ allocated before the task starts, not discovered at the end.
               task container (no network)        google-cloud/<model>
 ```
 
-The entry is built on the official `plan-verify` starter and adds one
-structural change: **MCP discovery**. The starter harnesses ship `bash`,
-`read_file`, and `write_file` only, and `kit check` reports the resulting `mcp`
-warning because the agent never opens the applications a task serves.
+The entry builds on the official `plan-verify` starter and adds one structural
+change: **MCP discovery**. Starter harnesses ship `bash`, `read_file` and
+`write_file` only, so `kit check` raises its `mcp` warning: the agent never
+opens the applications a task serves.
 
 At task start the harness reads the task's `mcp_servers` list, opens one
 Streamable-HTTP JSON-RPC client per server through `taskbridge.MCPClient`, sends
 `initialize` and `tools/list`, and synthesises an OpenAI function definition for
-every remote tool from the server's own JSON Schema. The function name is
-`mcp__<server>__<tool>`, sanitised to `[A-Za-z0-9_-]`; the original remote name
-is preserved for the call, so a dotted name such as `sheet.read` is exposed as
-`mcp__apps__sheet_read` and routed back unchanged. The catalogue is capped at 48
-tools and each description at 900 characters, so a large application cannot
-crowd the conversation out of context. A discovery failure is logged and the run
+every remote tool from the server's own JSON Schema, named
+`mcp__<server>__<tool>` and sanitised to `[A-Za-z0-9_-]`; the original name is
+kept for the call, so `sheet.read` becomes `mcp__apps__sheet_read` and routes
+back unchanged. The catalogue caps at 48 tools and 900 characters per
+description, so a large application cannot crowd out the context. A discovery failure is logged and the run
 continues with the shell tools rather than aborting the task.
 
 Roles never share context. The planner explores the project and writes a
@@ -90,53 +89,85 @@ cannot finish.
 
 | | value |
 |---|---|
-| Dev score (mean over 29 tasks) | `0.449` |
-| Tasks with a non-zero score | `3` / 29 |
-| Tasks at or above 0.8 | `1` / 29 |
-| Total model cost | `458.89M tokens` |
-| Total wall clock | `3.7 h of task time across 5 tasks` |
-| Mean tokens per task | `91778k` |
+| Tasks the harness started | 5 of 29 |
+| Mean reward over those 5 (the only comparable number) | **0.449** |
+| Mean over all 29, counting unstarted tasks as 0 | 0.077 |
+| Tasks with a non-zero score | 3 of 5 started |
+| Tasks at or above 0.8 | 1 of 5 (`data-center-site-model`, reward 1.000) |
+| Total model spend | 458.9M tokens |
+| Wall clock | 223 min of task time across the 5 tasks |
+| Mean spend per task | 91.8M tokens (range 38.9M–152.7M) |
+| Tasks the grader refused to start | 12 of 17 attempted, `evaluator: RuntimeError`, 0 s and 0 tokens each |
 
-**Figure 2 — score vs cost.** `[[FIGURE_2_DESCRIPTION]]` Each point is one dev
-task (tokens on the x-axis, reward on the y-axis); the frontier shows where
-extra spend stopped buying score. Tasks on the flat part of the frontier are the
-ones where the harness spent its budget without converting it into a deliverable
-— the failure mode the verifier is meant to catch.
+**Figure 2 — score vs cost.** One point per task: tokens spent against reward.
+The shape is the opposite of the usual one. The cheapest task
+(`data-center-site-model`, 38.9M tokens) scored 1.000; the two most expensive
+(`data-hall-mep-routing*`, 132M and 153M) scored 0.000. Both routing tasks kept
+re-reading a large file tree instead of writing the schedule, and with no step
+cap every extra round resent a growing history. This figure is in the write-up
+because a harness that reports only its best task would hide exactly this.
 
-**Figure 3 — failure breakdown.** `[[FIGURE_3_DESCRIPTION]]` Failures are
-classified from the run logs: (i) no deliverable written, (ii) deliverable
-written but a required item missing, (iii) numbers wrong, (iv) hard constraint
-violated (capped at 0.4 by the paper-score rule), (v) protocol error or timeout.
+**Figure 3 — failure breakdown.** Every task in the run lands in one bucket:
+graded at or above 0.8 (1), graded between 0 and 0.8 (2), graded at exactly 0
+(2), and never started because the grader itself failed (12). The last bucket
+dominates and is not the harness's: those trials recorded 0 seconds and 0
+tokens, so no container ever came up. Reported apart, because folding them into
+"reward 0" would make the harness look six times worse than it is, and reported
+at all, because a dev run that quietly drops 12 of 17 tasks is not evidence.
 
 Discipline coverage, from `eval/README.md`'s dev-set table: structural 10 (five
 in the public dev set), civil 18, electrical 27, mechanical 30 in the full
-benchmark; the dev set samples all four. `[[DISCIPLINE_TABLE]]`
+benchmark; the dev set samples all four.
+
+| discipline | in the full benchmark | tasks this harness started | best reward there |
+|---|---|---|---|
+| structural | 10 | 2 | 1.000 (`data-center-site-model`) |
+| civil | 18 | 1 | 0.727 (`landscape-sheet-revision`) |
+| electrical | 27 | 1 | 0.519 (`fire-test-validation-memo`) |
+| mechanical | 30 | 1 | 0.000 (`data-hall-mep-routing`) |
+
+Two structural tasks and one each from the other three: the sample is too small
+to rank disciplines, and the one perfect score is a structural task that asked
+for a model plus a summary, which is the shape this harness handles best.
 
 ## 4. Analysis: what the two changes buy (rubric: insight)
 
-`[[ABLATION_TABLE]]` — `plan-verify` vs `plan-verify-mcp` on the same tasks and
-model, with and without MCP tools and with the verifier disabled, isolating
-(a) application access and (b) the verification pass.
+**No controlled ablation yet.** The honest position first: we have not run
+`plan-verify` against `plan-verify-mcp` on the same tasks and model, so this
+section reports what the dev run does show and what it cannot. The one
+intervention we did measure is the spend cap, and it changed the trajectory of
+the run in a way worth stating.
 
-Three observations we expect to report in final form:
+| observation | evidence | what it supports |
+|---|---|---|
+| Spend and score anti-correlate on this sample | cheapest task 38.9M tokens → 1.000; two most expensive 132M and 153M → 0.000 | the worker loop needed a bound, not a bigger budget |
+| The bounded loop still finishes | after `PLE_MAX_STEPS`/`PLE_TOKEN_BUDGET` and an absolute deadline, a task stops on the same wrap-up path the clock uses, so it still writes its deliverable | capping cost does not mean cutting the run off mid-file |
+| Twelve tasks never started | 0 s, 0 tokens, `evaluator: RuntimeError` | the dev pipeline must be batched, not one 17-task job |
 
-1. **Application access changes what is attempted, not just how fast.** The
-   shell-only agent tends to produce a text summary of what it *would* write to
-   the workbook; with the MCP tools it writes the workbook.
-2. **The verifier is worth its tokens only when the plan names checkable
-   items.** A plan that lists deliverables and their checks gives the verifier
-   something to test; a vague plan produces a vague review and an extra round
-   that changes nothing.
-3. **Hard-constraint violations dominate the loss.** On paper-score tasks a
-   single unmet safety or feasibility constraint caps the item at 0.4, so the
-   largest single win available is a deterministic pre-check of units,
-   dimensions, and load combinations before the verifier ever runs.
+Two claims we do **not** make, having no measurement for them: that the MCP
+tools raise scores (no tool-free arm exists), and that the verifier pays for
+its tokens. Both are the first experiment once batching is stable.
+
+What the run supports is the design argument in §2: with application access the
+worker wrote a workbook, a PDF and a memo rather than a description of them —
+`landscape-sheet-revision` and `fire-test-validation-memo` are graded on files,
+not prose, and both cleared 0.5.
 
 ## 5. Limitations (rubric: reflection)
 
-- **Cost.** The three-role loop costs more than a single agent. `[[COST_NOTE]]`
+- **Cost.** 458.9M tokens over five tasks, 91.8M on average and 152.7M at the
+  worst: every tool round resent a growing history and nothing bounded the
+  rounds. The caps in `serve.py` (`PLE_MAX_STEPS`, `PLE_TOKEN_BUDGET`, an
+  absolute deadline, a 12k-character tool window) bound a task at roughly a
+  tenth of that. They landed after this run, so §3 predates them; the same
+  tasks under the cap are the ablation we owe.
 - **Judge variance.** Rubric and `checks-judge` tasks are scored by an LLM
-  judge; local dev scores therefore vary with the judge. `[[JUDGE_NOTE]]`
+  judge. The dev scores above were produced with the judge pointed at the same
+  local model the harness used (`JUDGE_MODEL=deepseek-chat`) rather than the
+  official `google-cloud/claude-opus-5-5`; the organizer's rerun uses the
+  official judge, so a rubric-heavy task can move between our number and theirs.
+  Tasks graded by a checks script, which is most of the five above, are not
+  affected.
 - **No task branching.** The harness never reads graders, reference files, or
   `artifacts/`, and never branches on task identity. All adaptation happens
   through the plan and the verifier's feedback.
