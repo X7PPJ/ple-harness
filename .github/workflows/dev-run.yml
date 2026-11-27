@@ -55,6 +55,14 @@ jobs:
       - name: Docker info
         run: docker version
 
+      - name: Free disk space
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+            /opt/hostedtoolcache/CodeQL /usr/local/share/boost || true
+          sudo docker image prune -af || true
+          df -h /
+
       - name: Install harness test dependencies
         run: python3 -m pip install --quiet openai websockets
 
