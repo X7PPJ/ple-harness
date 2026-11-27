@@ -73,38 +73,40 @@ def main():
                               boxstyle="round,pad=0.02,rounding_size=0.25",
                               linewidth=0, facecolor="#f7f9fc"))
 
-  ax.text(0.9, 4.85, "plan-verify-mcp", fontsize=34, color=INK, weight="bold")
-  ax.text(0.9, 4.25, "a planner / worker / verifier harness that drives the project's own tools",
-          fontsize=13.5, color=ACCENT)
-  ax.text(0.9, 3.62,
-          "Discovers every MCP server a PLE task serves — spreadsheets, documents, mail, CAD —\n"
-          "and hands those tools to the worker, a read-only subset to the checker, and a\n"
-          "deterministic file inventory to the verifier.",
-          fontsize=10.5, color=INK, linespacing=1.55)
+  ax.text(0.9, 5.30, "plan-verify-mcp", fontsize=28, color=INK, weight="bold", va="center")
+  ax.text(0.9, 4.80, "a planner / worker / verifier harness that drives the project's own tools",
+          fontsize=11.5, color=ACCENT, va="center")
+  ax.text(0.9, 4.05,
+          "Discovers every MCP server a PLE task serves (spreadsheets, documents, mail, CAD),\n"
+          "hands those tools to the worker and a read-only subset to the checker, and gives\n"
+          "the verifier a deterministic inventory of every file the run wrote.",
+          fontsize=9.2, color=INK, linespacing=1.6, va="top")
 
   boxes = [
-      ("1  discover", "mcp_servers → initialize → tools/list\n→ mcp__<server>__<tool>"),
-      ("2  plan", "deliverables, method, checks"),
-      ("3  work", "bash + files + every MCP tool"),
-      ("4  verify", "PASS | numbered gaps → fix rounds"),
+      ("1  discover", "mcp_servers -> initialize\n-> tools/list\n-> mcp__<server>__<tool>"),
+      ("2  plan", "deliverables,\nmethod,\nchecks"),
+      ("3  work", "bash + files +\nevery MCP tool"),
+      ("4  verify", "PASS | gaps\n-> fix rounds"),
   ]
-  x = 0.9
+  x, width, gap = 0.9, 2.55, 0.15
   for title, body in boxes:
-    ax.add_patch(FancyBboxPatch((x, 1.35), 2.45, 1.35,
+    ax.add_patch(FancyBboxPatch((x, 1.35), width, 1.5,
                                 boxstyle="round,pad=0.03,rounding_size=0.12",
                                 linewidth=1.1, edgecolor=ACCENT, facecolor="white"))
-    ax.text(x + 1.22, 2.36, title, ha="center", fontsize=10.5, color=ACCENT, weight="bold")
-    ax.text(x + 1.22, 1.85, body, ha="center", fontsize=8, color=MUTED, linespacing=1.4)
-    x += 2.62
+    ax.text(x + width / 2, 2.50, title, ha="center", va="center", fontsize=9.5,
+            color=ACCENT, weight="bold")
+    ax.text(x + width / 2, 1.92, body, ha="center", va="center", fontsize=6.8,
+            color=MUTED, linespacing=1.45)
+    x += width + gap
 
   nums = dev_numbers(args.root)
   if nums:
     scored, total, mean = nums
-    ax.text(0.9, 0.72, f"dev set: {scored}/{total} tasks scored, mean reward {mean:.3f}",
-            fontsize=11, color=INK)
+    ax.text(0.9, 0.80, f"dev set: {scored}/{total} tasks scored, mean reward {mean:.3f}",
+            fontsize=10, color=INK)
   else:
-    ax.text(0.9, 0.72, "dev-set artifacts pending: the entry's files are complete and kit-check clean",
-            fontsize=11, color=MUTED)
+    ax.text(0.9, 0.80, "dev-set artifacts pending: entry files complete, kit check clean",
+            fontsize=10, color=MUTED)
 
   fig.savefig(out, bbox_inches="tight", facecolor="white")
   plt.close(fig)
