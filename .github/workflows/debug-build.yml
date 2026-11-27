@@ -1,49 +1,235 @@
-# Builds one dev task's image with plain progress, to surface the real Docker
-# error that `eval/run.py` only reports as a failed RUN line.
 name: debug-build
 
 on:
   workflow_dispatch:
     inputs:
       task:
-        description: "dev task id (folder under tasks/)"
+        description: Dev task id to reproduce (folder under tasks/)
+        type: string
         required: true
-        default: "permission-to-operate-memo"
+        default: footing-settlement-verification
+
+permissions: {}
 
 jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 90
     env:
-      HF_TOKEN: ${{ secrets.HF_TOKEN }}
+      TASK: ${{ inputs.task }}
+      HF_REVISION: 9ca4de831267dd81750f958c6c6c58df6407104b
+      TZ: UTC
+    defaults:
+      run:
+        shell: bash
     steps:
-      - name: Free disk space
+      - name: Record the hosted runner
         run: |
-          df -h /
-          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
-            /opt/hostedtoolcache/CodeQL /usr/local/share/boost || true
-          df -h /
+          set -euo pipefail
+          diag="$RUNNER_TEMP/ple-diagnostic"
+          mkdir -p "$diag"
+          date -u '+%Y-%m-%d %H:%M:%S' > "$diag/started-utc.txt"
+          {
+            date -u
+            uname -m
+            nproc
+            docker version
+            docker info --format 'root={{.DockerRootDir}} driver={{.Driver}} cpus={{.NCPU}} memoryBytes={{.MemTotal}}'
+            docker buildx version
+            docker system df
+            df -h
+            free -h
+            swapon --show
+          } | tee "$diag/runner.txt"
 
-      - name: Fetch the task folder
+      - name: Install the diagnostic dataset client pinned by the local kit lock
         run: |
-          python3 -m pip install --quiet huggingface_hub
-          python3 - <<'PY'
-          import os
-          from huggingface_hub import snapshot_download
-          task = os.environ["TASK"]
-          path = snapshot_download(
-              "google/physical-engineerings-last-exam", repo_type="dataset",
-              allow_patterns=[f"tasks/{task}/**"], local_dir="./ple_data",
-              max_workers=4, etag_timeout=120)
-          print("downloaded", path)
-          PY
+          set -euo pipefail
+          python3 -m venv "$RUNNER_TEMP/ple-hf"
+          "$RUNNER_TEMP/ple-hf/bin/pip" -q install huggingface-hub==1.33.0
+
+      - name: Download the pinned task and release manifest
         env:
-          TASK: ${{ inputs.task }}
-
-      - name: Docker build (plain progress)
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_HUB_DISABLE_PROGRESS_BARS: "1"
         run: |
-          set -o pipefail
-          cd "ple_data/tasks/${{ inputs.task }}"
-          ls environment
-          sudo docker build --progress=plain -t "debug-${{ inputs.task }}" \
-            -f environment/Dockerfile environment 2>&1 | tail -120
+          set -euo pipefail
+          "$RUNNER_TEMP/ple-hf/bin/python" - <<'PY'
+          import os
+          from pathlib import Path
+          from huggingface_hub import snapshot_download
+
+          task = os.environ["TASK"]
+
+          try:
+              snapshot_download(
+                  "google/physical-engineerings-last-exam",
+                  repo_type="dataset",
+                  revision=os.environ["HF_REVISION"],
+                  token=os.environ["HF_TOKEN"],
+                  allow_patterns=["release.json", f"tasks/{task}/**"],
+                  local_dir=Path(os.environ["RUNNER_TEMP"]) / "ple-data",
+                  max_workers=4,
+                  etag_timeout=120,
+              )
+          except Exception as exc:
+              raise SystemExit(f"Dataset download failed ({type(exc).__name__}). Check dataset access and connectivity.") from None
+          PY
+
+      - name: Verify every task file against release.json
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' | tee "$RUNNER_TEMP/ple-diagnostic/release-check.txt"
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+
+          task = os.environ["TASK"]
+          data = Path(os.environ["RUNNER_TEMP"]) / "ple-data"
+          root = data / "tasks" / task
+          release = json.loads((data / "release.json").read_text(encoding="utf-8"))
+          record, = (entry for entry in release["tasks"] if entry["task_id"] == task)
+          files = sorted((p.relative_to(root).as_posix(), p) for p in root.rglob("*") if p.is_file())
+          digest = hashlib.sha256()
+          byte_count = 0
+          for relative, path in files:
+              if path.is_symlink():
+                  raise SystemExit(f"Unexpected symlink: {relative}")
+              content = path.read_bytes()
+              byte_count += len(content)
+              digest.update(f"{hashlib.sha256(content).hexdigest()}  {relative}\n".encode())
+
+          actual = {"files": len(files), "bytes": byte_count, "sha256": digest.hexdigest()}
+          expected = {field: record[field] for field in actual}
+          print(f"task={task} revision={os.environ['HF_REVISION']}")
+          print("release ", json.dumps(expected, sort_keys=True))
+          print("fetched ", json.dumps(actual, sort_keys=True))
+          if actual != expected:
+              raise SystemExit("Task integrity check failed before Docker build")
+          PY
+
+      - name: Inspect the service dependency metadata
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' | tee "$RUNNER_TEMP/ple-diagnostic/service-metadata.txt"
+          import json
+          import os
+          import re
+          import tomllib
+          from collections import Counter
+          from pathlib import Path
+
+          task = os.environ["TASK"]
+          service = {
+              "backfeed-energization-reply": "code_execution",
+              "footing-settlement-verification": "excel_v2",
+          }[task]
+          root = Path(os.environ["RUNNER_TEMP"]) / "ple-data/tasks" / task
+          service_dir = root / "environment/tools/mcp_servers" / service
+          print(f"service={service}")
+          for name in ("pyproject.toml", "uv.lock"):
+              path = service_dir / name
+              print(f"{name} present={path.is_file()}")
+              if not path.is_file():
+                  if name == "uv.lock":
+                      print("uv.lock source types and git presence unknown")
+                  continue
+              try:
+                  with path.open("rb") as stream:
+                      data = tomllib.load(stream)
+              except (OSError, ValueError) as exc:
+                  print(f"{name} unreadable={type(exc).__name__}")
+                  if name == "uv.lock":
+                      print("uv.lock source types and git presence unknown")
+                  continue
+              section = data.get("project") if name == "pyproject.toml" else data
+              spec = section.get("requires-python") if isinstance(section, dict) else None
+              if spec is None:
+                  spec = "(absent)"
+              elif not (isinstance(spec, str) and re.fullmatch(r"[0-9.*<>=~!, -]{1,128}", spec)):
+                  spec = "(nonstandard value withheld)"
+              print(f"{name} requires-python={spec}")
+              if name == "uv.lock":
+                  packages = data.get("package")
+                  if not isinstance(packages, list):
+                      print("uv.lock package table unavailable; git sources unknown")
+                      continue
+                  source_types = {"registry", "git", "url", "path", "directory", "editable", "virtual"}
+                  counts = Counter()
+                  for package in packages:
+                      source = package.get("source") if isinstance(package, dict) else None
+                      kinds = source_types.intersection(source) if isinstance(source, dict) else set()
+                      counts.update(kinds or {"other"})
+                  print(f"uv.lock package source types={json.dumps(counts, sort_keys=True)}")
+                  print(f"uv.lock has_git_source={counts['git'] > 0}")
+          PY
+
+      - name: Build the original image and sample resources
+        timeout-minutes: 65
+        env:
+          DOCKER_BUILDKIT: "1"
+        run: |
+          set -euo pipefail
+          diag="$RUNNER_TEMP/ple-diagnostic"
+          context="$RUNNER_TEMP/ple-data/tasks/$TASK/environment"
+          docker_root=$(docker info --format '{{.DockerRootDir}}')
+          disks=("$RUNNER_TEMP" "$docker_root")
+          if sudo -n test -d /var/lib/containerd; then disks+=(/var/lib/containerd); fi
+          sample() {
+            {
+              date -u --iso-8601=seconds
+              sudo -n df -Pk "${disks[@]}" || true
+              sudo -n df -Pi "${disks[@]}" || true
+              free -b || true
+              grep '^oom_kill ' /proc/vmstat || true
+              if [[ -r /sys/fs/cgroup/memory.events ]]; then cat /sys/fs/cgroup/memory.events; fi
+            } >> "$diag/resources.log" 2>&1
+          }
+          sample
+          (while sleep 10; do sample; done) &
+          monitor=$!
+          finish() {
+            kill "$monitor" 2>/dev/null || true
+            wait "$monitor" 2>/dev/null || true
+            sample
+          }
+          trap finish EXIT
+          docker build --platform linux/amd64 --progress=plain \
+            --tag "ple-debug-$TASK" --file "$context/Dockerfile" "$context" \
+            2>&1 | tee "$diag/build.log"
+
+      - name: Collect kernel OOM messages and post-build disk usage
+        if: always()
+        run: |
+          set -euo pipefail
+          diag="$RUNNER_TEMP/ple-diagnostic"
+          mkdir -p "$diag"
+          since=$(cat "$diag/started-utc.txt")
+          match='out of memory|oom[-_ ](kill|victim|reaper)|killed process|invoked oom-killer'
+          for source in journal dmesg; do
+            if [[ $source == journal ]]; then
+              reader=(journalctl -k -b --utc --since "$since" --no-pager -o short-iso)
+            else
+              reader=(dmesg --color=never --time-format iso --since "$since")
+            fi
+            {
+              echo "[$source since $since UTC]"
+              if sudo -n "${reader[@]}" > "$RUNNER_TEMP/ple-kernel.tmp"; then
+                grep -Ei "$match" "$RUNNER_TEMP/ple-kernel.tmp" || echo "No matching kernel messages returned"
+              else
+                echo "Kernel messages unavailable from this source"
+              fi
+            } >> "$diag/kernel-oom.log" 2>&1
+          done
+          docker system df > "$diag/docker-disk-after.txt" 2>&1 || true
+
+      - name: Upload build, integrity and resource logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ple-build-${{ inputs.task }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ple-diagnostic/
+          if-no-files-found: warn
+          retention-days: 14
