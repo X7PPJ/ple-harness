@@ -17,6 +17,11 @@ on:
         description: "Comma-separated dev task ids (empty = all 29)"
         required: false
         default: ""
+      no_swap:
+        description: "Skip the swap step (suspect in runner shutdowns)"
+        type: boolean
+        required: false
+        default: false
       skip_kit_check:
         description: "Skip kit check (it validates the entry, not the run; useful when the runner kills long Docker steps)"
         type: boolean
@@ -75,6 +80,7 @@ jobs:
           df -h /
 
       - name: Add swap (best effort)
+        if: ${{ !inputs.no_swap }}
         continue-on-error: true
         run: |
           free -h
