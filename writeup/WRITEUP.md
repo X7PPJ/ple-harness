@@ -126,9 +126,9 @@ benchmark; the dev set samples all four.
 | electrical | 27 | 1 | 0.519 (`fire-test-validation-memo`) |
 | mechanical | 30 | 1 | 0.000 (`data-hall-mep-routing`) |
 
-Two structural tasks and one each from the other three: the sample is too small
-to rank disciplines, and the one perfect score is a structural task that asked
-for a model plus a summary, which is the shape this harness handles best.
+Two structural tasks and one each from the others: too small a sample to rank
+disciplines, and the perfect score is a structural task asking for a model plus
+a summary — the shape this harness handles best.
 
 ## 4. Analysis: what the two changes buy (rubric: insight)
 
