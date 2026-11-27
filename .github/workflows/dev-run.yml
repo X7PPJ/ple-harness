@@ -17,6 +17,11 @@ on:
         description: "Comma-separated dev task ids (empty = all 29)"
         required: false
         default: ""
+      local_model:
+        description: "Run the dev set on the repository's own model (rewrites submission.yaml in this job only)"
+        type: boolean
+        required: false
+        default: true
 
 jobs:
   dev:
@@ -74,6 +79,22 @@ jobs:
           sudo mkswap /swapfile || true
           sudo swapon /swapfile || true
           free -h || true
+
+      - name: Point the checked-out entry at a local model
+        if: ${{ inputs.local_model }}
+        working-directory: harness
+        run: |
+          python3 - <<'PY'
+          import pathlib, re
+          p = pathlib.Path("submission.yaml")
+          t = p.read_text(encoding="utf-8")
+          t = re.sub(r"(?m)^model_api:.*$", "model_api: openai-compatible/deepseek-chat", t)
+          if "model_base_url:" not in t:
+              t = t.replace("model_api: openai-compatible/deepseek-chat",
+                            "model_api: openai-compatible/deepseek-chat\nmodel_base_url: https://api.deepseek.com/v1")
+          p.write_text(t, encoding="utf-8")
+          print(p.read_text(encoding="utf-8")[:400])
+          PY
 
       - name: Install harness test dependencies
         run: python3 -m pip install --quiet openai websockets
