@@ -80,7 +80,10 @@ Two facts about that run matter when reading the numbers:
 - **Coverage.** 5 of the 29 dev tasks produced artifacts. 12 more were attempted
   and never started — the kit reported `evaluator: RuntimeError` with 0 s and 0
   tokens, i.e. the task container never came up on the runner — and the 12
-  heaviest task images were not attempted there. A task without artifacts
+  heaviest task images were not attempted there. Longer jobs on the same runner
+  were killed about an hour in (`exit code 143`, "runner has received a
+  shutdown signal"), so the dev set has to be run in small batches; that is a
+  property of the free CI runner, not of the harness. A task without artifacts
   scores 0, so treat the per-task numbers in `artifacts/manifest.json` as "what
   the harness did on the tasks it got to start", not as a dev score.
 
