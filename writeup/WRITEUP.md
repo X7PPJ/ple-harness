@@ -108,7 +108,7 @@ why: the task that scored 1.000 finished in 117 steps, while the two zeros ran
 probing the model instead of writing the schedule, and every round resent a
 history that was already 66M and 76M prompt tokens deep. Step count, not
 difficulty, separates them — exactly what `PLE_MAX_STEPS` targets. A harness
-reporting only its best task would hide this.
+reporting only its best task hides this.
 
 **Figure 3 — failure breakdown.** Every task in the run lands in one bucket:
 graded at or above 0.8 (1), graded between 0 and 0.8 (2), graded at exactly 0
