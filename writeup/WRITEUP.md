@@ -147,9 +147,8 @@ the run in a way worth stating.
 | The zeros are loops, not hard tasks | 117 steps scored 1.000; 397 and 393 steps scored 0.000, 394 and 391 of them shell `exec` | step count, not difficulty, separates them — what `PLE_MAX_STEPS` targets |
 | Twelve tasks never started | 0 s, 0 tokens, `evaluator: RuntimeError` | the dev pipeline must be batched, not one 17-task job |
 
-Two claims we do **not** make, having no measurement for them: that the MCP
-tools raise scores (no tool-free arm exists), and that the verifier pays for
-its tokens. Both are the first experiment once batching is stable.
+Two claims we do **not** make, having no measurement: that the MCP tools raise
+scores (no tool-free arm exists), and that the verifier pays for its tokens.
 
 What the run supports is the design argument in §2: with application access the
 worker wrote a workbook, a PDF and a memo rather than a description of them —
@@ -162,8 +161,10 @@ not prose, and both cleared 0.5.
   worst: every tool round resent a growing history and nothing bounded the
   rounds. The caps in `serve.py` (`PLE_MAX_STEPS`, `PLE_TOKEN_BUDGET`, an
   absolute deadline, a 12k-character tool window) bound a task at roughly a
-  tenth of that. They landed after this run, so §3 predates them; the same
-  tasks under the cap are the ablation we owe.
+  tenth of that. They landed after this run, so §3 predates them. The
+  arithmetic is checkable: the 397-round loop resent about 838 tokens of new
+  history per round, so prompt tokens grew with the round count squared — the
+  same task stopped at 60 rounds would have spent about **1.5M**, not 66M.
 - **Judge variance.** Rubric and `checks-judge` tasks are scored by an LLM
   judge. The dev scores above were produced with the judge pointed at the same
   local model the harness used (`JUDGE_MODEL=deepseek-chat`) rather than the
@@ -177,13 +178,12 @@ not prose, and both cleared 0.5.
 - **MCP read/write heuristic.** Name-based classification can mislabel a tool;
   a mislabelled writer would only reach the non-writing roles, and the worker
   keeps the full catalogue either way.
-- **Heavy task images.** Twelve of the 29 dev tasks ship an image that installs a
-  full engineering workstation (FreeCAD, LibreOffice, PostgreSQL, MySQL, nginx,
-  PHP); the PLE docs put those images at about 17 GB in total. A free CI runner
-  builds the seventeen light images comfortably but is not a reliable place to
-  build the heavy ones, so the dev artifacts here cover the light tasks and the
-  heavy ones report 0 in the average. A local Docker host or a larger runner
-  removes that limitation without any change to the harness.
+- **Heavy task images.** Twelve of the 29 dev tasks install a full engineering
+  workstation (FreeCAD, LibreOffice, PostgreSQL, MySQL, nginx, PHP); the PLE docs
+  put those images near 17 GB in total. A free CI runner is not a reliable place
+  to build them, so the dev artifacts cover the light tasks and the heavy ones
+  count 0. A local Docker host or a larger runner removes that limitation with
+  no change to the harness.
 - **Next.** A deterministic unit-and-dimension checker (SI base units, load
   combinations, code-clause references) that runs between work and verify, and
   a cost-aware planner that assigns a token budget per deliverable.
