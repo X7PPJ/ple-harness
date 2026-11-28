@@ -99,16 +99,16 @@ cannot finish.
 | Mean spend per task | 91.8M tokens (range 38.9M–152.7M) |
 | Tasks the grader refused to start | 12 of 17 attempted, `evaluator: RuntimeError`, 0 s and 0 tokens each |
 
-**Figure 2 — score vs cost.** One point per task: tokens spent against reward.
-The shape is the opposite of the usual one. The cheapest task
-(`data-center-site-model`, 38.9M tokens) scored 1.000; the two most expensive
-(`data-hall-mep-routing*`, 132M and 153M) scored 0.000. The trajectories say
+**Figure 2 — score vs cost.** One point per task, two panels: agent steps on the
+left, tokens on the right, reward on both. The shape is the opposite of the
+usual one. The cheapest task (`data-center-site-model`, 38.9M tokens) scored 1.000; the
+two most expensive (`data-hall-mep-routing*`, 132M and 153M) scored 0.000. The trajectories say
 why: the task that scored 1.000 finished in 117 steps, while the two zeros ran
 397 and 393 steps, of which 394 and 391 were shell `exec` calls — the loop kept
 probing the model instead of writing the schedule, and every round resent a
-history that was already 66M and 76M prompt tokens deep. Step count, not task
-difficulty, separates them, which is exactly what the `PLE_MAX_STEPS` cap
-targets. A harness that reported only its best task would hide this.
+history that was already 66M and 76M prompt tokens deep. Step count, not
+difficulty, separates them — exactly what `PLE_MAX_STEPS` targets. A harness
+reporting only its best task would hide this.
 
 **Figure 3 — failure breakdown.** Every task in the run lands in one bucket:
 graded at or above 0.8 (1), graded between 0 and 0.8 (2), graded at exactly 0
