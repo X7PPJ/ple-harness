@@ -152,48 +152,77 @@ def figure_architecture(out):
   plt.close(fig)
 
 
-def figure_score_cost(tasks, out):
-  """Reward against spend, split by whether the task was actually graded.
+def _steps_from_artifacts(root):
+  """Maps task -> agent steps, from the committed trajectories."""
+  out = {}
+  base = pathlib.Path(root) / "artifacts"
+  if not base.exists():
+    return out
+  for task in base.iterdir():
+    traj = task / "trajectory.json"
+    if not traj.exists():
+      continue
+    data = _read(traj)
+    metrics = (data or {}).get("final_metrics") or {}
+    steps = metrics.get("total_steps") or len((data or {}).get("steps") or [])
+    if steps:
+      out[task.name] = float(steps)
+  return out
 
-  A task the evaluator could not grade sits at reward 0 for real spend, which
-  would read as "expensive and useless". Plotting those apart keeps the figure
-  honest about which zeros are the harness's and which are the environment's.
+
+def figure_score_cost(tasks, out, steps=None):
+  """Reward against the two things a run actually spends: steps and tokens.
+
+  The five measured tasks split cleanly by step count - the one that scored
+  1.000 finished in 117 steps, the two zeros ran 397 and 393 - so the left
+  panel plots the mechanism and the right one the bill. Tasks the evaluator
+  could not grade are marked separately, so a "0" that is the environment's
+  fault does not read as the harness's.
   """
+  steps = steps or {}
   graded = [(t["tokens"], t["reward"], name) for name, t in tasks.items()
             if t["tokens"] > 0 and t["status"] == "ok"]
   ungraded = [(t["tokens"], t["reward"], name) for name, t in tasks.items()
               if t["tokens"] > 0 and t["status"] != "ok"]
-  fig, ax = plt.subplots(figsize=(7.6, 4.6), dpi=200)
-  if not graded and not ungraded:
-    ax.text(0.5, 0.5, "no token usage recorded", ha="center", va="center",
-            transform=ax.transAxes)
-  else:
-    if graded:
-      ax.scatter([p[0] / 1000.0 for p in graded], [p[1] for p in graded],
-                 s=40, color=ACCENT, alpha=0.85, edgecolor="white", linewidth=0.6,
-                 label=f"graded ({len(graded)})")
-    if ungraded:
-      ax.scatter([p[0] / 1000.0 for p in ungraded], [p[1] for p in ungraded],
-                 s=40, color="#b0b7c3", alpha=0.9, edgecolor="white", linewidth=0.6,
-                 marker="s", label=f"grader failed ({len(ungraded)})")
-    if graded:
-      pts = sorted(graded, key=lambda p: p[0])
-      best, frontier = -1.0, []
-      for point in pts:
-        if point[1] > best:
-          best = point[1]
-          frontier.append(point)
-      ax.plot([p[0] / 1000.0 for p in frontier], [p[1] for p in frontier],
-              color=WARN, lw=1.4, label="best reward so far")
-    ax.legend(frameon=False, fontsize=8, loc="center right")
-  ax.set_xlabel("tokens spent on the task (thousands)")
-  ax.set_ylabel("task reward (0–1)")
-  n = len(graded) + len(ungraded)
-  ax.set_title(f"Figure 2 — reward vs spend on {n} dev task(s): "
-               f"{len(graded)} graded, {len(ungraded)} grader failure(s)",
+  fig, axes = plt.subplots(1, 2, figsize=(10.4, 4.2), dpi=200)
+  panels = (
+      (axes[0], "agent steps on the task", "steps"),
+      (axes[1], "tokens spent on the task (millions)", "tokens"),
+  )
+  for ax, label, key in panels:
+    if key == "steps":
+      gx = [(steps.get(name, 0.0), reward) for _, reward, name in graded]
+      ux = [(steps.get(name, 0.0), reward) for _, reward, name in ungraded]
+      gx = [p for p in gx if p[0] > 0]
+      ux = [p for p in ux if p[0] > 0]
+    else:
+      gx = [(tokens / 1e6, reward) for tokens, reward, _ in graded]
+      ux = [(tokens / 1e6, reward) for tokens, reward, _ in ungraded]
+    if gx:
+      ax.scatter([p[0] for p in gx], [p[1] for p in gx], s=46, color=ACCENT,
+                 edgecolor="white", linewidth=0.7, zorder=3,
+                 label=f"graded ({len(gx)})")
+      for x, y in gx:
+        if y <= 0:      # the two zeros sit on top of each other; the panels' x
+          continue      # axis already separates them
+        ax.annotate(f"{y:.2f}", (x, y), textcoords="offset points",
+                    xytext=(6, 5), fontsize=7, color=MUTED)
+    if ux:
+      ax.scatter([p[0] for p in ux], [p[1] for p in ux], s=46, color="#b0b7c3",
+                 marker="s", edgecolor="white", linewidth=0.7, zorder=3,
+                 label=f"grader failed ({len(ux)})")
+    ax.set_xlabel(label, fontsize=9)
+    ax.set_ylim(-0.06, 1.08)
+    ax.set_ylabel("task reward (0-1)", fontsize=9)
+    ax.spines[["top", "right"]].set_visible(False)
+    ax.grid(alpha=0.18, linewidth=0.6)
+    ax.tick_params(labelsize=8)
+    if gx or ux:
+      ax.legend(frameon=False, fontsize=8, loc="best")
+  fig.suptitle("Figure 2 - the zeros are long loops, not hard tasks: "
+               "117 steps scored 1.000, 397 and 393 scored 0.000",
                fontsize=9.5, color=INK)
-  ax.spines[["top", "right"]].set_visible(False)
-  ax.grid(alpha=0.18, linewidth=0.6)
+  fig.tight_layout(rect=(0, 0, 1, 0.94))
   fig.savefig(out / "fig2_score_cost.png", bbox_inches="tight", facecolor="white")
   plt.close(fig)
 
@@ -243,7 +272,7 @@ def main():
     tasks = tasks_from_manifest(args.artifacts)
   print(f"tasks with data: {len(tasks)}")
   figure_architecture(out)
-  figure_score_cost(tasks, out)
+  figure_score_cost(tasks, out, _steps_from_artifacts(args.artifacts or args.root))
   figure_failures(tasks, out)
   print("wrote", *sorted(p.name for p in out.glob("fig*.png")))
 
