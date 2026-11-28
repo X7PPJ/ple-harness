@@ -24,5 +24,6 @@ serve: /opt/harness/venv/bin/python {src}/serve.py
 # that is still making progress: 60 rounds and 24M tokens are roughly four
 # times what the slowest dev task needed.
 env:
+  PLE_TASK_BUDGET_SEC: "700"
   PLE_MAX_STEPS: "60"
   PLE_TOKEN_BUDGET: "24000000"
