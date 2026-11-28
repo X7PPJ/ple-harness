@@ -102,10 +102,13 @@ cannot finish.
 **Figure 2 — score vs cost.** One point per task: tokens spent against reward.
 The shape is the opposite of the usual one. The cheapest task
 (`data-center-site-model`, 38.9M tokens) scored 1.000; the two most expensive
-(`data-hall-mep-routing*`, 132M and 153M) scored 0.000. Both routing tasks kept
-re-reading a large file tree instead of writing the schedule, and with no step
-cap every extra round resent a growing history. This figure is in the write-up
-because a harness that reports only its best task would hide exactly this.
+(`data-hall-mep-routing*`, 132M and 153M) scored 0.000. The trajectories say
+why: the task that scored 1.000 finished in 117 steps, while the two zeros ran
+397 and 393 steps, of which 394 and 391 were shell `exec` calls — the loop kept
+probing the model instead of writing the schedule, and every round resent a
+history that was already 66M and 76M prompt tokens deep. Step count, not task
+difficulty, separates them, which is exactly what the `PLE_MAX_STEPS` cap
+targets. A harness that reported only its best task would hide this.
 
 **Figure 3 — failure breakdown.** Every task in the run lands in one bucket:
 graded at or above 0.8 (1), graded between 0 and 0.8 (2), graded at exactly 0
@@ -140,8 +143,8 @@ the run in a way worth stating.
 
 | observation | evidence | what it supports |
 |---|---|---|
-| Spend and score anti-correlate on this sample | cheapest task 38.9M tokens → 1.000; two most expensive 132M and 153M → 0.000 | the worker loop needed a bound, not a bigger budget |
-| The bounded loop still finishes | after `PLE_MAX_STEPS`/`PLE_TOKEN_BUDGET` and an absolute deadline, a task stops on the same wrap-up path the clock uses, so it still writes its deliverable | capping cost does not mean cutting the run off mid-file |
+
+| The zeros are loops, not hard tasks | 117 steps scored 1.000; 397 and 393 steps scored 0.000, 394 and 391 of them shell `exec` | step count, not difficulty, separates them — what `PLE_MAX_STEPS` targets |
 | Twelve tasks never started | 0 s, 0 tokens, `evaluator: RuntimeError` | the dev pipeline must be batched, not one 17-task job |
 
 Two claims we do **not** make, having no measurement for them: that the MCP
