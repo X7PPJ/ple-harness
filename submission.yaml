@@ -18,3 +18,11 @@ install: >-
   uv venv --python 3.12 /opt/harness/venv
   && uv pip install --python /opt/harness/venv/bin/python -r {src}/requirements.txt
 serve: /opt/harness/venv/bin/python {src}/serve.py
+
+# Bounds that apply inside the serve container (the evaluator's clock is the
+# only limit otherwise). They stop a runaway tool loop without cutting a task
+# that is still making progress: 60 rounds and 24M tokens are roughly four
+# times what the slowest dev task needed.
+env:
+  PLE_MAX_STEPS: "60"
+  PLE_TOKEN_BUDGET: "24000000"
