@@ -95,7 +95,7 @@ cannot finish.
 | Tasks with a non-zero score | 3 of 5 started |
 | Tasks at or above 0.8 | 1 of 5 (`data-center-site-model`, reward 1.000) |
 | Total model spend | 458.9M tokens |
-| Wall clock | 223 min of task time across the 5 tasks |
+| Wall clock | 221 min of task time across the 5 tasks |
 | Mean spend per task | 91.8M tokens (range 38.9M–152.7M) |
 | Tasks the grader refused to start | 12 of 17 attempted, `evaluator: RuntimeError`, 0 s and 0 tokens each |
 
